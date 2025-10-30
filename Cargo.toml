@@ -1,0 +1,14 @@
+[package]
+name = "axum-auth"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "auth"
+path = "src/lib.rs"
+
+[[bin]]
+name = "auth"
+path = "src/bin/main.rs"
+
+[dependencies]

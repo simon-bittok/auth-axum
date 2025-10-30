@@ -1,0 +1,15 @@
+# Rust binaries
+/target
+
+# Environmental variables
+*.env
+*.fish
+# Allow example envs
+!.env.example
+!.example.fish
+
+# Production configuration
+production.yaml
+
+# PEM keys
+*.pem
