@@ -4,7 +4,7 @@ server:
   port: 7150
 
 logger:
-  level: debug # off, warn, trace, error, info, debug
+  level: trace # off, warn, trace, error, info, debug
   format: pretty # json, pretty, compact, full
   ## Crates to log i.e *name of your crate*, sqlx, axum, etc
   crates:
@@ -12,3 +12,4 @@ logger:
     - "axum"
     - "sqlx"
     - "tower"
+    - "tower-http"
