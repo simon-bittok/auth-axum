@@ -13,3 +13,25 @@ logger:
     - "sqlx"
     - "tower"
     - "tower-http"
+
+database:
+  uri: postgresql://postgres:postgres@localhost:5432/postgres
+  username: postgres
+  password: postgres
+  host: localhost
+  port: 5432
+  database: postgres
+  ssl: false
+
+redis:
+  uri: redis://localhost:6379
+
+auth:
+  access:
+    private_key: config/security/keys/access_key.pem
+    public_key: config/security/keys/access_key_pub.pem
+    exp: 900 # Seconds 15 minutes
+  refresh:
+    private_key: config/security/keys/refresh_key.pem
+    public_key: config/security/keys/refresh_key_pub.pem
+    exp: 2419200 # Seconds 4 Weeks

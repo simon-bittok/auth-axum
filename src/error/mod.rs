@@ -41,4 +41,12 @@ pub enum Error {
     IOError(#[from] std::io::Error),
     #[error(transparent)]
     TryInit(#[from] tracing_subscriber::util::TryInitError),
+    #[error(transparent)]
+    Sqlx(#[from] sqlx::Error),
+    #[error(transparent)]
+    Migrate(#[from] sqlx::migrate::MigrateError),
+    #[error(transparent)]
+    Redis(#[from] redis::RedisError),
+    #[error(transparent)]
+    JsonWebToken(#[from] jsonwebtoken::errors::Error),
 }

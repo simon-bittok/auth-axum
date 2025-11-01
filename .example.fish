@@ -1,1 +1,2 @@
-set -gx DATABASE_URL ""
+set -x DATABASE_URL ""
+set -x REDIS_URL ""
