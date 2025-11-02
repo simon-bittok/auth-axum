@@ -3,6 +3,7 @@ use std::{
     fmt::{self, Display},
 };
 
+use argon2::password_hash::Error as PasswordHashError;
 use tracing_subscriber::filter::FromEnvError;
 
 #[derive(Debug)]
@@ -49,4 +50,25 @@ pub enum Error {
     Redis(#[from] redis::RedisError),
     #[error(transparent)]
     JsonWebToken(#[from] jsonwebtoken::errors::Error),
+    #[error("{0}")]
+    Argon2(argon2::Error),
+    #[error("{0}")]
+    PasswordHash(argon2::password_hash::Error),
+    #[error("Invalid email or password")]
+    InvalidCredentials,
+}
+
+impl From<argon2::Error> for Error {
+    fn from(err: argon2::Error) -> Self {
+        Self::Argon2(err)
+    }
+}
+
+impl From<PasswordHashError> for Error {
+    fn from(err: PasswordHashError) -> Self {
+        match err {
+            PasswordHashError::Password => Self::InvalidCredentials,
+            _ => Self::PasswordHash(err),
+        }
+    }
 }
