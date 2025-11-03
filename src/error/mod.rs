@@ -4,10 +4,36 @@ use std::{
 };
 
 use argon2::password_hash::Error as PasswordHashError;
+use axum::{
+    Json,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
+use serde_json::json;
 use tracing_subscriber::filter::FromEnvError;
 
 #[derive(Debug)]
 pub struct Report(pub color_eyre::Report);
+
+impl IntoResponse for Report {
+    fn into_response(self) -> Response {
+        let err = self.0;
+        let err_string = format!("{:?}", &err);
+
+        tracing::error!("An error occured {}", err_string);
+
+        if let Some(error) = err.downcast_ref::<Error>() {
+            return error.response();
+        }
+
+        // backup response
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "Something went wrong on our end."})),
+        )
+            .into_response()
+    }
+}
 
 impl<E> From<E> for Report
 where
@@ -56,6 +82,10 @@ pub enum Error {
     PasswordHash(argon2::password_hash::Error),
     #[error("Invalid email or password")]
     InvalidCredentials,
+    #[error("Error occured when signing or verifying token")]
+    TokenError,
+    #[error(transparent)]
+    SerdeJson(#[from] serde_json::error::Error),
 }
 
 impl From<argon2::Error> for Error {
@@ -70,5 +100,20 @@ impl From<PasswordHashError> for Error {
             PasswordHashError::Password => Self::InvalidCredentials,
             _ => Self::PasswordHash(err),
         }
+    }
+}
+
+impl Error {
+    pub fn response(&self) -> Response {
+        let (status, message) = match self {
+            Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
+        };
+
+        let body = Json(json!({
+            "error": message
+        }));
+
+        (status, body).into_response()
     }
 }

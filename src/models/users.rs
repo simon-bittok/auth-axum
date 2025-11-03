@@ -1,18 +1,27 @@
+use std::borrow::Cow;
+
 use argon2::{
-    Argon2,
+    Argon2, PasswordHash, PasswordVerifier,
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
 use chrono::{DateTime, FixedOffset};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{Encode, Executor, Postgres, prelude::FromRow};
 use uuid::Uuid;
 
 use crate::Result;
 
-pub struct NewUser {
-    email: String,
-    name: String,
-    password: String,
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct RegisterUser<'a> {
+    email: Cow<'a, str>,
+    name: Cow<'a, str>,
+    password: Cow<'a, str>,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct LoginUser<'a> {
+    email: Cow<'a, str>,
+    password: Cow<'a, str>,
 }
 
 #[derive(Debug, Deserialize, Clone, FromRow, Encode)]
@@ -27,7 +36,7 @@ pub struct User {
 }
 
 impl User {
-    pub async fn create_user<'e, C>(db: &C, new_user: &NewUser) -> Result<Self>
+    pub async fn create_user<'e, C>(db: &C, new_user: &RegisterUser<'_>) -> Result<Self>
     where
         for<'a> &'a C: Executor<'e, Database = Postgres>,
     {
@@ -43,8 +52,21 @@ impl User {
         .bind(password_hash(&new_user.password)?)
         .fetch_one(db)
         .await?;
-
         Ok(user)
+    }
+
+    fn verify_password(&self, password: &str) -> Result<()> {
+        let password_hash =
+            PasswordHash::new(&self.password).map_err(crate::Error::PasswordHash)?;
+
+        Argon2::default()
+            .verify_password(password.as_bytes(), &password_hash)
+            .map_err(|err| match err {
+                argon2::password_hash::Error::Password => crate::Error::InvalidCredentials,
+                _ => crate::Error::PasswordHash(err),
+            })?;
+
+        Ok(())
     }
 }
 
