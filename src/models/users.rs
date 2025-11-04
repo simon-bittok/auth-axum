@@ -4,7 +4,10 @@ use argon2::{
     Argon2, PasswordHash, PasswordVerifier,
     password_hash::{PasswordHasher, SaltString, rand_core::OsRng},
 };
-use chrono::{DateTime, FixedOffset};
+use chrono::{
+    DateTime, FixedOffset,
+    format::{DelayedFormat, StrftimeItems},
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{Encode, Executor, Postgres, prelude::FromRow};
 use uuid::Uuid;
@@ -22,6 +25,16 @@ pub struct RegisterUser<'a> {
 pub struct LoginUser<'a> {
     email: Cow<'a, str>,
     password: Cow<'a, str>,
+}
+
+impl LoginUser<'_> {
+    pub fn email(&self) -> &str {
+        &self.email
+    }
+
+    pub fn password(&self) -> &str {
+        &self.password
+    }
 }
 
 #[derive(Debug, Deserialize, Clone, FromRow, Encode)]
@@ -55,7 +68,22 @@ impl User {
         Ok(user)
     }
 
-    fn verify_password(&self, password: &str) -> Result<()> {
+    pub async fn find_by_email<'e, C>(db: &C, email: &str) -> Result<Option<Self>>
+    where
+        for<'a> &'a C: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r"
+            SELECT * FROM users WHERE email = $1
+        ",
+        )
+        .bind(email.trim())
+        .fetch_optional(db)
+        .await
+        .map_err(Into::into)
+    }
+
+    pub fn verify_password(&self, password: &str) -> Result<()> {
         let password_hash =
             PasswordHash::new(&self.password).map_err(crate::Error::PasswordHash)?;
 
@@ -67,6 +95,26 @@ impl User {
             })?;
 
         Ok(())
+    }
+
+    pub fn pid(&self) -> Uuid {
+        self.pid
+    }
+
+    pub fn email(&self) -> &str {
+        &self.email
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn id(&self) -> i32 {
+        self.id
+    }
+
+    pub fn created_at(&self) -> DelayedFormat<StrftimeItems<'_>> {
+        self.created_at.format("%Y-%m-%d %H:%M")
     }
 }
 

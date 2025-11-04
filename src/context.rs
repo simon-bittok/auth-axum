@@ -41,27 +41,21 @@ impl AppContext {
 
         Ok(())
     }
-}
 
-impl TryFrom<&Config> for AppContext {
-    type Error = Report;
-
-    fn try_from(config: &Config) -> Result<Self, Self::Error> {
-        let db =
-            tokio::runtime::Handle::current().block_on(async { config.database().pool().await });
+    pub async fn try_from(config: &Config) -> Result<Self, Report> {
+        let db = config.database().pool().await;
+        let redis = config.redis().multiplexed_connection().await?;
 
         let auth = AuthContext {
             access: config.auth().access().try_into()?,
             refresh: config.auth().refresh().try_into()?,
         };
-        let redis = tokio::runtime::Handle::current()
-            .block_on(async { config.redis().multiplexed_connection().await })?;
 
         Ok(Self {
-            config: config.clone(),
+            redis,
             db,
             auth,
-            redis,
+            config: config.clone(),
         })
     }
 }

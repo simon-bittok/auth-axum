@@ -12,6 +12,8 @@ use axum::{
 use serde_json::json;
 use tracing_subscriber::filter::FromEnvError;
 
+use crate::{middlewares::AuthError, models::ModelError};
+
 #[derive(Debug)]
 pub struct Report(pub color_eyre::Report);
 
@@ -69,8 +71,6 @@ pub enum Error {
     #[error(transparent)]
     TryInit(#[from] tracing_subscriber::util::TryInitError),
     #[error(transparent)]
-    Sqlx(#[from] sqlx::Error),
-    #[error(transparent)]
     Migrate(#[from] sqlx::migrate::MigrateError),
     #[error(transparent)]
     Redis(#[from] redis::RedisError),
@@ -86,6 +86,10 @@ pub enum Error {
     TokenError,
     #[error(transparent)]
     SerdeJson(#[from] serde_json::error::Error),
+    #[error(transparent)]
+    Auth(#[from] AuthError),
+    #[error(transparent)]
+    Model(#[from] ModelError),
 }
 
 impl From<argon2::Error> for Error {
@@ -107,6 +111,8 @@ impl Error {
     pub fn response(&self) -> Response {
         let (status, message) = match self {
             Self::InvalidCredentials => (StatusCode::UNAUTHORIZED, "Invalid email or password"),
+            Self::Auth(err) => return err.response(),
+            Self::Model(err) => return err.response(),
             _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
         };
 

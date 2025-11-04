@@ -17,6 +17,8 @@ pub enum AuthError {
     WrongCredentials,
 }
 
+pub type AuthResult<T, E = AuthError> = Result<T, E>;
+
 impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
         self.response()
