@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Encode, Executor, Postgres, prelude::FromRow};
 use uuid::Uuid;
 
-use crate::Result;
+use crate::{Result, models::ModelError};
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct RegisterUser<'a> {
@@ -81,6 +81,21 @@ impl User {
         .fetch_optional(db)
         .await
         .map_err(Into::into)
+    }
+
+    pub async fn find_by_pid<'e, C>(db: &C, pid: Uuid) -> Result<Self>
+    where
+        for<'a> &'a C: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query_as(
+            r"
+            SELECT * FROM users WHERE pid = $1
+        ",
+        )
+        .bind(pid)
+        .fetch_optional(db)
+        .await?
+        .ok_or(crate::Error::Model(ModelError::EntityNotFound).into())
     }
 
     pub fn verify_password(&self, password: &str) -> Result<()> {

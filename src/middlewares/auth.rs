@@ -101,15 +101,14 @@ where
             };
 
             // verify the access token
-            let token_details = match ctx.auth.access.verify_token(&access_token) {
+            let _token_details = match ctx.auth.access.verify_token(&access_token) {
                 Ok(details) => details,
                 Err(err) => return Ok(err.into_response()),
             };
 
-            // Reconstuct the Request and insert the token details into it.
+            // Reconstuct the Request
 
-            let mut req = Request::from_parts(parts, body);
-            req.extensions_mut().insert(token_details);
+            let req = Request::from_parts(parts, body);
 
             inner.call(req).await
         })

@@ -137,8 +137,19 @@ where
             // if access token is missing we issue a new one.
             let new_access_token: String;
             if let Some(token) = access_token {
-                new_access_token = token;
+                // Verify if the existing access token is still valid
+                match ctx.auth.access.verify_token(&token) {
+                    Ok(_) => new_access_token = token,
+                    Err(_) => {
+                        // Token is invalid for whatever reason
+                        match ctx.auth.access.generate_token(stored_details.user_pid) {
+                            Ok(details) => new_access_token = details.token.unwrap(),
+                            Err(e) => return Ok(e.into_response()),
+                        }
+                    }
+                }
             } else {
+                // No access token present; probably expired and got expelled from cookies
                 match ctx.auth.access.generate_token(stored_details.user_pid) {
                     Ok(details) => {
                         new_access_token = details.token.unwrap();
